@@ -12,8 +12,11 @@ interface AirportDao {
     fun getAllAirports() : Flow<List<Airport>>
 
     @Query(
-        "SELECT * FROM airport WHERE iata_code LIKE :query OR name LIKE :query ORDER BY passengers LIMIT 8"
+        "SELECT * FROM airport WHERE iata_code = :query OR name LIKE :query ORDER BY passengers LIMIT 8"
     )
     fun getSuggestedAirports(query: String) : Flow<List<Airport>>
+
+    @Query("SELECT * FROM airport WHERE id = :id")
+    fun getSelectedAirport(id: Int) : Flow<Airport>
 
 }

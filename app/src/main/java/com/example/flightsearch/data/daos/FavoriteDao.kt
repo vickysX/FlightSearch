@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface FavoriteDao {
 
-    @Query("SELECT departure_code, destination_code FROM favorite")
+    @Query("SELECT * FROM favorite")
     fun getFavoriteFlights() : Flow<List<Favorite>>
 
     @Insert

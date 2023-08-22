@@ -6,4 +6,5 @@ import kotlinx.coroutines.flow.Flow
 interface AirportsRepository {
     fun getAllAirports() : Flow<List<Airport>>
     fun getSuggestedAirports(query: String) : Flow<List<Airport>>
+    fun getSelectedAirport(id: Int) : Flow<Airport>
 }

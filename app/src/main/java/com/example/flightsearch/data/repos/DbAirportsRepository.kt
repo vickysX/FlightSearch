@@ -14,4 +14,7 @@ class DbAirportsRepository @Inject constructor(
     override fun getSuggestedAirports(query: String): Flow<List<Airport>> =
         airportDao.getSuggestedAirports(query)
 
+    override fun getSelectedAirport(id: Int): Flow<Airport> =
+        airportDao.getSelectedAirport(id)
+
 }
