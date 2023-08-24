@@ -3,7 +3,6 @@ package com.example.flightsearch.ui
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.room.util.query
 import com.example.flightsearch.data.repos.AirportsRepository
 import com.example.flightsearch.data.repos.FavoritesRepository
 import com.example.flightsearch.data.repos.UserPreferencesRepository
@@ -50,7 +49,7 @@ class FlightSearchViewModel @Inject constructor(
                 initialValue = listOf()
             )
 
-    var favorites : StateFlow<List<Favorite>> =
+    private var favorites : StateFlow<List<Favorite>> =
         favoritesRepository.getFavoriteFlights().map {
             it
         }
@@ -71,6 +70,7 @@ class FlightSearchViewModel @Inject constructor(
             )
 
     var flights = mutableStateListOf<Flight>()
+    var favoriteFlights = mutableStateListOf<Flight>()
 
     fun createListOfFlights(id: Int) {
         viewModelScope.launch {
@@ -111,6 +111,14 @@ class FlightSearchViewModel @Inject constructor(
             if (favorites.value.contains(flights.last().toFavorite())) {
                 flights.last().isFavorite = true
             }
+        }
+    }
+
+    fun provideFavoritesAsFlights() {
+        favorites.value.map { favorite ->
+            favoriteFlights.add(
+                favorite.toFlight()
+            )
         }
     }
 
