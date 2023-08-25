@@ -8,15 +8,18 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface AirportDao {
 
-    @Query("SELECT * FROM airport")
+    @Query("SELECT * FROM airport ORDER BY passengers DESC")
     fun getAllAirports() : Flow<List<Airport>>
 
     @Query(
-        "SELECT * FROM airport WHERE iata_code = :query OR name LIKE :query ORDER BY passengers LIMIT 8"
+        "SELECT * FROM airport WHERE iata_code = :query OR name LIKE :query ORDER BY passengers DESC LIMIT 8"
     )
     fun getSuggestedAirports(query: String) : Flow<List<Airport>>
 
     @Query("SELECT * FROM airport WHERE id = :id")
     fun getSelectedAirport(id: Int) : Flow<Airport>
+
+    @Query("SELECT * FROM airport WHERE iata_code = :iataCode")
+    fun getAirportByIataCode(iataCode: String) : Flow<Airport>
 
 }

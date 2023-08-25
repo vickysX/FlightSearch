@@ -17,4 +17,7 @@ class DbAirportsRepository @Inject constructor(
     override fun getSelectedAirport(id: Int): Flow<Airport> =
         airportDao.getSelectedAirport(id)
 
+    override fun getAirportByIataCode(iataCode: String): Flow<Airport> =
+        airportDao.getAirportByIataCode(iataCode)
+
 }

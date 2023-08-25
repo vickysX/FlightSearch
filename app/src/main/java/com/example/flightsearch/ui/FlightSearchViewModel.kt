@@ -103,8 +103,8 @@ class FlightSearchViewModel @Inject constructor(
         airports.value.map {
             flights.add(
                 Flight(
-                    departureCode = airport.iataCode,
-                    destinationCode = it.iataCode,
+                    departureAirport = airport,
+                    destinationAirport = it,
                     isFavorite = false
                 )
             )
@@ -115,10 +115,20 @@ class FlightSearchViewModel @Inject constructor(
     }
 
     fun provideFavoritesAsFlights() {
-        favorites.value.map { favorite ->
-            favoriteFlights.add(
-                favorite.toFlight()
-            )
+        viewModelScope.launch {
+            favorites.value.map { favorite ->
+                favoriteFlights.add(
+                    Flight(
+                        airportsRepository
+                            .getAirportByIataCode(favorite.departureCode)
+                            .first(),
+                        airportsRepository
+                            .getAirportByIataCode(favorite.destinationCode)
+                            .first(),
+                        true
+                    )
+                )
+            }
         }
     }
 
