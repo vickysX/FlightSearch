@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -157,26 +158,14 @@ fun AirportItem(
         modifier = modifier.clickable {
             // TODO: Define function to make appear the list of flights
         }
-    ) {
-        val airportName = buildAnnotatedString {
-            withStyle(
-                style = SpanStyle(
-                    fontWeight = FontWeight.Bold
-                )
-            ) {
-                append(airport.iataCode)
-            }
-            append(" ")
-            append(airport.name)
-        }
-        Icon(
+    ) {Icon(
             imageVector = Icons.Default.LocalAirport,
             contentDescription = stringResource(
                 id = R.string.airport_item
             )
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = airportName)
+        AirportSpannable(airport = airport)
     }
 }
 
@@ -207,9 +196,24 @@ fun FlightCard(
 ) {
     //var starColor =
     Card {
-        Row {
+        Row(
+            modifier = Modifier.padding(8.dp)
+        ) {
             Column {
-
+                // TODO: Some refactoring might be needed
+                Text(
+                    text = stringResource(id = R.string.departure)
+                )
+                AirportSpannable(
+                    airport = flight.departureAirport
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(id = R.string.destination)
+                )
+                AirportSpannable(
+                    airport = flight.destinationAirport
+                )
             }
             IconButton(
                 onClick = {
@@ -223,10 +227,30 @@ fun FlightCard(
                 Icon(
                     imageVector = Icons.Filled.Star,
                     contentDescription = null,
+                    // TODO: Make the star change color
                 )
             }
         }
     }
+}
+
+@Composable
+fun AirportSpannable(
+    modifier: Modifier = Modifier,
+    airport: Airport
+) {
+    val airportName = buildAnnotatedString {
+        withStyle(
+            style = SpanStyle(
+                fontWeight = FontWeight.Bold
+            )
+        ) {
+            append(airport.iataCode)
+        }
+        append(" ")
+        append(airport.name)
+    }
+    Text(text = airportName)
 }
 
 @Composable
@@ -248,6 +272,34 @@ fun AirportItemPreview() {
                 name = "Leonardo Da Vinci International Airport",
                 passengers = 1_000_000
             )
+        )
+    }
+}
+
+@Composable
+@Preview
+fun FlightCard() {
+    val departureAirport = Airport(
+        id = 0,
+        iataCode = "FCO",
+        name = "Leonardo Da Vinci International Airport",
+        passengers = 1_000_000
+    )
+    val destinationAirport = Airport(
+        id = 1,
+        iataCode = "DUB",
+        name = "Dubin Airport",
+        passengers = 700_000
+    )
+    FlightSearchTheme {
+        FlightCard(
+            flight = Flight(
+                departureAirport = departureAirport,
+                destinationAirport = destinationAirport,
+                isFavorite = true
+            ),
+            addToFav = {},
+            removeFromFav = {}
         )
     }
 }
