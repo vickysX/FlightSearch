@@ -3,4 +3,5 @@
     
     <string name="search_bar_placeholder">Enter departure airport</string>
     <string name="search_bar_icon">Search bar</string>
+    <string name="airport_item">Airport</string>
 </resources>
