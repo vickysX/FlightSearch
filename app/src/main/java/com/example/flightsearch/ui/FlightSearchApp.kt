@@ -1,5 +1,6 @@
 package com.example.flightsearch.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,7 +27,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -194,24 +198,28 @@ fun FlightCard(
     addToFav: (Flight) -> Unit,
     removeFromFav: (Flight) -> Unit
 ) {
-    //var starColor =
-    Card {
+    Card(
+        modifier = modifier.fillMaxWidth()
+    ) {
         Row(
-            modifier = Modifier.padding(8.dp)
+            modifier = Modifier.padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                // TODO: Some refactoring might be needed
-                Text(
-                    text = stringResource(id = R.string.departure)
+            Column(
+                modifier = Modifier.padding(
+                    top = 4.dp,
+                    bottom = 4.dp,
+                    start = 4.dp,
+                    end = 8.dp
                 )
-                AirportSpannable(
+            ) {
+                FlightCardItem(
+                    resDepArr = R.string.departure,
                     airport = flight.departureAirport
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = stringResource(id = R.string.destination)
-                )
-                AirportSpannable(
+                Spacer(modifier = Modifier.height(12.dp))
+                FlightCardItem(
+                    resDepArr = R.string.destination,
                     airport = flight.destinationAirport
                 )
             }
@@ -227,10 +235,31 @@ fun FlightCard(
                 Icon(
                     imageVector = Icons.Filled.Star,
                     contentDescription = null,
-                    // TODO: Make the star change color
+                    tint = if (flight.isFavorite) {
+                        Color.Yellow
+                    } else {
+                        Color.Unspecified
+                    },
+                    modifier = Modifier.size(32.dp)
                 )
             }
         }
+    }
+}
+
+@Composable
+fun FlightCardItem(
+    modifier: Modifier = Modifier,
+    @StringRes resDepArr: Int,
+    airport: Airport
+) {
+    Column(
+        modifier = modifier.padding(4.dp)
+    ) {
+        Text(
+            text = stringResource(id = resDepArr)
+        )
+        AirportSpannable(airport = airport)
     }
 }
 
@@ -264,7 +293,9 @@ fun SearchBarPreview() {
 @Composable
 @Preview
 fun AirportItemPreview() {
-    FlightSearchTheme {
+    FlightSearchTheme(
+        darkTheme = true
+    ) {
         AirportItem(
             airport = Airport(
                 id = 0,
