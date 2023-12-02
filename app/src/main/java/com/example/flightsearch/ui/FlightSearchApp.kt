@@ -2,6 +2,7 @@ package com.example.flightsearch.ui
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,6 +14,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocalAirport
 import androidx.compose.material.icons.filled.Search
@@ -23,21 +26,35 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.flightsearch.R
 import com.example.flightsearch.models.Airport
 import com.example.flightsearch.ui.theme.FlightSearchTheme
@@ -48,8 +65,8 @@ fun FlightSearchApp(
     modifier: Modifier = Modifier,
     viewModel: FlightSearchViewModel = hiltViewModel()
 ) {
-    val userQuery = viewModel.queryString.collectAsState()
-    val suggestions = viewModel.suggestions.collectAsState()
+    val userQuery = viewModel.userInput
+    val suggestions by viewModel.searchResults.collectAsStateWithLifecycle()
     val flights = viewModel.flights
     val favoriteFlights = viewModel.favoriteFlights
     val addToFav : (Flight) -> Unit = {viewModel.addToFavorites(it)}
@@ -70,9 +87,10 @@ fun FlightSearchApp(
     ) {paddingValues ->
         AppBody(
             modifier = Modifier.padding(paddingValues),
-            query = userQuery.value,
+            query = userQuery,
             updateQuery = {viewModel.updateQueryString(it)},
-            suggestions = suggestions.value,
+            onInputSubmitted = { viewModel.saveQueryPreference() },
+            suggestions = suggestions,
             flights = flights,
             favoriteFlights = favoriteFlights,
             addToFav = addToFav,
@@ -81,11 +99,13 @@ fun FlightSearchApp(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun AppBody(
     modifier: Modifier = Modifier,
     query: String,
     updateQuery: (String) -> Unit,
+    onInputSubmitted: () -> Unit,
     suggestions: List<Airport>,
     flights: List<Flight>,
     favoriteFlights: List<Flight>,
@@ -93,31 +113,60 @@ fun AppBody(
     removeFromFav: (Flight) -> Unit
 ) {
     Column(
-        modifier = modifier
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        SearchBar(
-            value = query,
-            onValueChange = updateQuery
-        )
-        /** TODO: Conditional rendering of lists **/
-        if (query.isEmpty()) {
+        var active by rememberSaveable {
+            mutableStateOf(false)
+        }
+        val keyboardController = LocalSoftwareKeyboardController.current
+        Box(
+            contentAlignment = Alignment.Center
+        ) {
+            SearchBar(
+                query = query,
+                onQueryChange =  updateQuery,
+                onSearch = {keyboardController?.hide()},
+                active = active,
+                onActiveChange = {active = it},
+                placeholder = {
+                    Text(text = stringResource(id = R.string.search_bar_placeholder))
+                },
+                modifier = Modifier.align(Alignment.TopCenter),
+                content = {
+                    Suggestions(airports = suggestions)
+                }
+            )
             Flights(
                 flights = favoriteFlights,
                 addToFav = addToFav,
                 removeFromFav = removeFromFav
             )
-        } else {
-
         }
+
+        /** TODO: Conditional rendering of lists **/
+        /*Box {
+            Flights(
+                flights = favoriteFlights,
+                addToFav = addToFav,
+                removeFromFav = removeFromFav
+            )
+            if (query.isNotBlank()) {
+                // Display suggestions
+                Suggestions(airports = suggestions)
+            }
+        }*/
     }
 }
 
-@Composable
+/*@Composable
 fun SearchBar(
     modifier: Modifier = Modifier,
     value: String,
-    onValueChange: (String) -> Unit
+    onValueChange: (String) -> Unit,
+    onInputSubmitted: () -> Unit
 ) {
+    val focusRequester = FocusRequester()
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -137,9 +186,29 @@ fun SearchBar(
             )
         },
         shape = RoundedCornerShape(32.dp),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .focusRequester(focusRequester)
+            .onFocusChanged { focusState ->
+                if (!focusState.isFocused) {
+                    onInputSubmitted()
+                }
+            },
+        keyboardOptions = KeyboardOptions(
+            capitalization = KeyboardCapitalization.Sentences,
+            keyboardType = KeyboardType.Text,
+            imeAction = ImeAction.Search
+        ),
+        keyboardActions = KeyboardActions(
+            onSearch = {
+                onInputSubmitted()
+                focusRequester.freeFocus()
+            }
+        ),
+        maxLines = 1,
+        minLines = 1
     )
-}
+}*/
 
 @Composable
 fun Suggestions(
@@ -148,7 +217,7 @@ fun Suggestions(
 ) {
     LazyColumn() {
         items(airports) {
-
+            AirportItem(airport = it)
         }
     }
 }
@@ -282,13 +351,17 @@ fun AirportSpannable(
     Text(text = airportName)
 }
 
-@Composable
+/*@Composable
 @Preview
 fun SearchBarPreview() {
     FlightSearchTheme {
-        SearchBar(value = "", onValueChange = {})
+        SearchBar(
+            value = "",
+            onValueChange = {},
+            onInputSubmitted = {}
+        )
     }
-}
+}*/
 
 @Composable
 @Preview

@@ -1,6 +1,10 @@
 package com.example.flightsearch.ui
 
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.flightsearch.data.repos.AirportsRepository
@@ -9,16 +13,19 @@ import com.example.flightsearch.data.repos.UserPreferencesRepository
 import com.example.flightsearch.models.Airport
 import com.example.flightsearch.models.Favorite
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 private const val STOP_TIMEOUT_MILLIS = 5_000L
-
 
 @HiltViewModel
 class FlightSearchViewModel @Inject constructor(
@@ -28,6 +35,29 @@ class FlightSearchViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val coroutineScope = viewModelScope
+
+    private var _userInput = MutableStateFlow("")
+    var userInput by mutableStateOf("")
+        private set
+
+    private val airportsFlow = airportsRepository.getAllAirports()
+
+    val searchResults: StateFlow<List<Airport>> =
+        snapshotFlow { userInput }
+            .combine(airportsFlow) { query, airports ->
+                when {
+                    query.isNotEmpty() -> airports.filter { airport ->
+                        airport.name.contains(query, ignoreCase = true) ||
+                                airport.iataCode.contains(query, ignoreCase = true)
+                    }
+                    else -> emptyList()
+                }
+            }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
+                initialValue = emptyList()
+            )
 
     var queryString : StateFlow<String> =
         userPreferencesRepository.queryString.map {
@@ -59,8 +89,8 @@ class FlightSearchViewModel @Inject constructor(
                 initialValue = listOf()
             )
 
-    var suggestions : StateFlow<List<Airport>> =
-        airportsRepository.getSuggestedAirports(queryString.value).map {
+    fun suggestions(query: String) : StateFlow<List<Airport>> =
+        airportsRepository.getSuggestedAirports(query).map {
             it
         }
             .stateIn(
@@ -82,8 +112,13 @@ class FlightSearchViewModel @Inject constructor(
     }
 
     fun updateQueryString(query: String) {
+        userInput = query
+        // perform suggestions query
+    }
+
+    fun saveQueryPreference() {
         viewModelScope.launch {
-            userPreferencesRepository.saveQueryString(query)
+            userPreferencesRepository.saveQueryString(userInput)
         }
     }
 
