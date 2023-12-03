@@ -6,4 +6,6 @@
     <string name="airport_item">Airport</string>
     <string name="departure">DEPART</string>
     <string name="destination">ARRIVE</string>
+    <string name="clear_input">Clear query input</string>
+    <string name="favorite_flights">Favorite flights</string>
 </resources>
