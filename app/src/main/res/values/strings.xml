@@ -7,5 +7,7 @@
     <string name="departure">DEPART</string>
     <string name="destination">ARRIVE</string>
     <string name="clear_input">Clear query input</string>
+
     <string name="favorite_flights">Favorite flights</string>
+    <string name="flights_from">Flights from %1$s</string>
 </resources>

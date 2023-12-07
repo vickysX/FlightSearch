@@ -54,7 +54,7 @@ fun FlightSearchApp(
     modifier: Modifier = Modifier,
     viewModel: FlightSearchViewModel = hiltViewModel()
 ) {
-    val userQuery = viewModel.userInput.collectAsStateWithLifecycle()
+    val userQuery = viewModel.userInput
     val suggestions by viewModel.searchResults.collectAsStateWithLifecycle()
     val flights = viewModel.flights
     val favoriteFlights = viewModel.favoriteFlights
@@ -76,11 +76,11 @@ fun FlightSearchApp(
     ) { paddingValues ->
         AppBody(
             modifier = Modifier.padding(paddingValues),
-            query = userQuery.value,
+            query = userQuery,
             updateQuery = { viewModel.updateQueryString(it) },
             onInputSubmitted = { viewModel.saveQueryPreference() },
             suggestions = suggestions,
-            onAirportClicked = {},
+            onAirportClicked = {viewModel.provideFlights(it)},
             flights = flights,
             favoriteFlights = favoriteFlights,
             addToFav = addToFav,
@@ -109,6 +109,9 @@ fun AppBody(
         var active by rememberSaveable {
             mutableStateOf(false)
         }
+        val onActiveChange = {isActive: Boolean ->
+            active = isActive
+        }
         Column(
             modifier = Modifier.padding(
                 horizontal = 16.dp,
@@ -122,7 +125,7 @@ fun AppBody(
                 onAirportClicked = onAirportClicked,
                 suggestions = suggestions,
                 active = active,
-                onActiveChange = {active = it}
+                onActiveChange = onActiveChange
             )
             if (!active) {
                 Flights(
@@ -159,7 +162,7 @@ fun AirportsSearchBar(
             onInputSubmitted()
         },
         active = active,
-        onActiveChange = onActiveChange,
+        onActiveChange = {onActiveChange(it)},
         placeholder = {
             Text(text = stringResource(id = R.string.search_bar_placeholder))
         },
@@ -189,7 +192,10 @@ fun AirportsSearchBar(
         content = {
             Suggestions(
                 airports = suggestions,
-                onAirportClicked = onAirportClicked
+                onAirportClicked = { airport ->
+                    onAirportClicked(airport)
+                    onActiveChange(false)
+                }
             )
         }
     )
@@ -355,34 +361,7 @@ fun AirportSpannable(
     )
 }
 
-/*@Composable
-@Preview
-fun SearchBarPreview() {
-    FlightSearchTheme {
-        SearchBar(
-            value = "",
-            onValueChange = {},
-            onInputSubmitted = {}
-        )
-    }
-}*/
 
-//@Composable
-/*@Preview
-fun AirportItemPreview() {
-    FlightSearchTheme(
-        darkTheme = true
-    ) {
-        AirportItem(
-            airport = Airport(
-                id = 0,
-                iataCode = "FCO",
-                name = "Leonardo Da Vinci International Airport",
-                passengers = 1_000_000
-            )
-        )
-    }
-}*/
 
 /*
 @Composable

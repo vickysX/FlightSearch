@@ -1,6 +1,9 @@
 package com.example.flightsearch.ui
 
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,10 +13,8 @@ import com.example.flightsearch.data.repos.PreferencesRepository
 import com.example.flightsearch.models.Airport
 import com.example.flightsearch.models.Favorite
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -32,13 +33,13 @@ class FlightSearchViewModel @Inject constructor(
 
     private val coroutineScope = viewModelScope
 
-    private var _userInput = MutableStateFlow("")
-    val userInput = _userInput.asStateFlow()
+    var userInput by mutableStateOf("")
+        private set
 
     private val airportsFlow = airportsRepository.getAllAirports()
 
     val searchResults: StateFlow<List<Airport>> =
-        snapshotFlow { _userInput.value }
+        snapshotFlow { userInput }
             .combine(airportsFlow) { query, airports ->
                 when {
                     query.isNotEmpty() -> airports.filter { airport ->
@@ -49,13 +50,13 @@ class FlightSearchViewModel @Inject constructor(
                 }
             }
             .stateIn(
-                scope = viewModelScope,
+                scope = coroutineScope,
                 started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
                 initialValue = emptyList()
             )
 
     private var airports : StateFlow<List<Airport>> =
-        airportsRepository.getAllAirports().map {
+        airportsFlow.map {
             it
         }
             .stateIn(
@@ -87,12 +88,12 @@ class FlightSearchViewModel @Inject constructor(
     }
 
     fun updateQueryString(query: String) {
-        _userInput.value = query
+        userInput = query
     }
 
     fun saveQueryPreference() {
         coroutineScope.launch {
-            userPreferencesRepository.saveQueryString(_userInput.value)
+            userPreferencesRepository.saveQueryString(userInput)
         }
     }
 
@@ -116,12 +117,15 @@ class FlightSearchViewModel @Inject constructor(
         }
     }
 
-    fun provideFlights(airport: Airport) {
-        airports.value.map {
+    fun provideFlights(selectedAirport: Airport) {
+        for (airport in airports.value) {
+            if (airport == selectedAirport) {
+                continue
+            }
             flights.add(
                 Flight(
-                    departureAirport = airport,
-                    destinationAirport = it,
+                    departureAirport = selectedAirport,
+                    destinationAirport = airport,
                     isFavorite = false
                 )
             )
@@ -150,7 +154,7 @@ class FlightSearchViewModel @Inject constructor(
     }
 
     init {
-        _userInput.value = loadPreferenceFromDataStore()
+        userInput = loadPreferenceFromDataStore()
     }
 
 }
