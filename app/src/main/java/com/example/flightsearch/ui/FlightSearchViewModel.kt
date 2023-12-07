@@ -1,21 +1,19 @@
 package com.example.flightsearch.ui
 
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.flightsearch.data.repos.AirportsRepository
 import com.example.flightsearch.data.repos.FavoritesRepository
-import com.example.flightsearch.data.repos.UserPreferencesRepository
+import com.example.flightsearch.data.repos.PreferencesRepository
 import com.example.flightsearch.models.Airport
 import com.example.flightsearch.models.Favorite
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -29,19 +27,30 @@ private const val STOP_TIMEOUT_MILLIS = 5_000L
 class FlightSearchViewModel @Inject constructor(
     private val airportsRepository: AirportsRepository,
     private val favoritesRepository: FavoritesRepository,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
     private val coroutineScope = viewModelScope
 
+    private var queryString : StateFlow<String> =
+        userPreferencesRepository.queryString.map {
+            it
+        }
+            .stateIn(
+                scope = coroutineScope,
+                started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
+                initialValue = ""
+            )
+
     private var _userInput = MutableStateFlow("")
-    var userInput by mutableStateOf("")
-        private set
+    val userInput = _userInput.asStateFlow()
+    /*var userInput by mutableStateOf("")
+        private set*/
 
     private val airportsFlow = airportsRepository.getAllAirports()
 
     val searchResults: StateFlow<List<Airport>> =
-        snapshotFlow { userInput }
+        snapshotFlow { _userInput.value }
             .combine(airportsFlow) { query, airports ->
                 when {
                     query.isNotEmpty() -> airports.filter { airport ->
@@ -55,16 +64,6 @@ class FlightSearchViewModel @Inject constructor(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
                 initialValue = emptyList()
-            )
-
-    var queryString : StateFlow<String> =
-        userPreferencesRepository.queryString.map {
-            it
-        }
-            .stateIn(
-                scope = coroutineScope,
-                started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-                initialValue = ""
             )
 
     private var airports : StateFlow<List<Airport>> =
@@ -87,21 +86,11 @@ class FlightSearchViewModel @Inject constructor(
                 initialValue = listOf()
             )
 
-    fun suggestions(query: String) : StateFlow<List<Airport>> =
-        airportsRepository.getSuggestedAirports(query).map {
-            it
-        }
-            .stateIn(
-                scope = coroutineScope,
-                started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-                initialValue = listOf()
-            )
-
     var flights = mutableStateListOf<Flight>()
     var favoriteFlights = mutableStateListOf<Flight>()
 
     fun createListOfFlights(id: Int) {
-        viewModelScope.launch {
+        coroutineScope.launch {
             val selectedAirport = airportsRepository.getSelectedAirport(id)
             airports.first().map {
 
@@ -110,14 +99,21 @@ class FlightSearchViewModel @Inject constructor(
     }
 
     fun updateQueryString(query: String) {
-        userInput = query
-        // perform suggestions query
+        _userInput.value = query
     }
 
     fun saveQueryPreference() {
-        viewModelScope.launch {
-            userPreferencesRepository.saveQueryString(userInput)
+        coroutineScope.launch {
+            userPreferencesRepository.saveQueryString(_userInput.value)
         }
+    }
+
+    private fun loadPreferenceFromDataStore() : String {
+        var queryPreference = ""
+        coroutineScope.launch {
+            queryPreference = userPreferencesRepository.queryString.first()
+        }
+        return queryPreference
     }
 
     fun addToFavorites(flight: Flight) {
@@ -148,7 +144,7 @@ class FlightSearchViewModel @Inject constructor(
     }
 
     fun provideFavoritesAsFlights() {
-        viewModelScope.launch {
+        coroutineScope.launch {
             favorites.value.map { favorite ->
                 favoriteFlights.add(
                     Flight(
@@ -163,6 +159,10 @@ class FlightSearchViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    init {
+        _userInput.value = loadPreferenceFromDataStore()
     }
 
 }

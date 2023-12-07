@@ -15,14 +15,14 @@ import javax.inject.Inject
 
 class UserPreferencesRepository @Inject constructor(
     private val dataStore : DataStore<Preferences>
-) {
+) : PreferencesRepository {
 
     private companion object {
         val QUERY_STRING = stringPreferencesKey("query_string")
         const val TAG = "UserPreferencesRepo"
     }
 
-    val queryString : Flow<String> = dataStore.data
+    override val queryString : Flow<String> = dataStore.data
         .catch {
             if (it is IOException) {
                 Log.e(TAG, "Error reading preferences", it)
@@ -35,7 +35,7 @@ class UserPreferencesRepository @Inject constructor(
             preferences[QUERY_STRING] ?: ""
         }
 
-    suspend fun saveQueryString(queryString: String) {
+    override suspend fun saveQueryString(queryString: String) {
         dataStore.edit { preferences ->
             preferences[QUERY_STRING] = queryString
         }

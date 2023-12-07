@@ -42,13 +42,11 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.flightsearch.R
 import com.example.flightsearch.models.Airport
-import com.example.flightsearch.ui.theme.FlightSearchTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,7 +54,7 @@ fun FlightSearchApp(
     modifier: Modifier = Modifier,
     viewModel: FlightSearchViewModel = hiltViewModel()
 ) {
-    val userQuery = viewModel.userInput
+    val userQuery = viewModel.userInput.collectAsStateWithLifecycle()
     val suggestions by viewModel.searchResults.collectAsStateWithLifecycle()
     val flights = viewModel.flights
     val favoriteFlights = viewModel.favoriteFlights
@@ -78,10 +76,11 @@ fun FlightSearchApp(
     ) { paddingValues ->
         AppBody(
             modifier = Modifier.padding(paddingValues),
-            query = userQuery,
+            query = userQuery.value,
             updateQuery = { viewModel.updateQueryString(it) },
             onInputSubmitted = { viewModel.saveQueryPreference() },
             suggestions = suggestions,
+            onAirportClicked = {},
             flights = flights,
             favoriteFlights = favoriteFlights,
             addToFav = addToFav,
@@ -98,6 +97,7 @@ fun AppBody(
     updateQuery: (String) -> Unit,
     onInputSubmitted: () -> Unit,
     suggestions: List<Airport>,
+    onAirportClicked: (Airport) -> Unit,
     flights: List<Flight>,
     favoriteFlights: List<Flight>,
     addToFav: (Flight) -> Unit,
@@ -110,7 +110,6 @@ fun AppBody(
         var active by rememberSaveable {
             mutableStateOf(false)
         }
-        val keyboardController = LocalSoftwareKeyboardController.current
         Column(
             //horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(
@@ -118,41 +117,14 @@ fun AppBody(
                 vertical = 8.dp
             )
         ) {
-            SearchBar(
+            AirportsSearchBar(
                 query = query,
-                onQueryChange = updateQuery,
-                onSearch = { keyboardController?.hide() },
+                updateQuery = updateQuery,
+                onInputSubmitted = onInputSubmitted,
+                onAirportClicked = onAirportClicked,
+                suggestions = suggestions,
                 active = active,
-                onActiveChange = { active = it },
-                placeholder = {
-                    Text(text = stringResource(id = R.string.search_bar_placeholder))
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = stringResource(
-                            id = R.string.search_bar_icon
-                        )
-                    )
-                },
-                trailingIcon = {
-                    if (query.isNotEmpty()) {
-                        IconButton(onClick = { updateQuery("") }) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = stringResource(
-                                    id = R.string.clear_input
-                                )
-                            )
-                        }
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                content = {
-                    Suggestions(airports = suggestions)
-                }
+                onActiveChange = {active = it}
             )
             if (!active) {
                 Flights(
@@ -162,39 +134,36 @@ fun AppBody(
                 )
             }
         }
-
-        /** TODO: Conditional rendering of lists **/
-        /*Box {
-            Flights(
-                flights = favoriteFlights,
-                addToFav = addToFav,
-                removeFromFav = removeFromFav
-            )
-            if (query.isNotBlank()) {
-                // Display suggestions
-                Suggestions(airports = suggestions)
-            }
-        }*/
     }
 }
 
-/*@Composable
-fun SearchBar(
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun AirportsSearchBar(
     modifier: Modifier = Modifier,
-    value: String,
-    onValueChange: (String) -> Unit,
-    onInputSubmitted: () -> Unit
+    query: String,
+    updateQuery: (String) -> Unit,
+    onInputSubmitted: () -> Unit,
+    onAirportClicked: (Airport) -> Unit,
+    suggestions: List<Airport>,
+    active: Boolean,
+    onActiveChange: (Boolean) -> Unit
 ) {
-    val focusRequester = FocusRequester()
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
+    val keyboardController = LocalSoftwareKeyboardController.current
+    SearchBar(
+        query = query,
+        onQueryChange =  {
+            updateQuery(it)
+            onInputSubmitted()
+        },
+        onSearch = {
+            keyboardController?.hide()
+            onInputSubmitted()
+        },
+        active = active,
+        onActiveChange = onActiveChange,
         placeholder = {
-            Text(
-                text = stringResource(
-                    id = R.string.search_bar_placeholder
-                )
-            )
+            Text(text = stringResource(id = R.string.search_bar_placeholder))
         },
         leadingIcon = {
             Icon(
@@ -204,42 +173,45 @@ fun SearchBar(
                 )
             )
         },
-        shape = RoundedCornerShape(32.dp),
-        modifier = modifier
-            .fillMaxWidth()
-            .focusRequester(focusRequester)
-            .onFocusChanged { focusState ->
-                if (!focusState.isFocused) {
-                    onInputSubmitted()
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { updateQuery("") }) {
+                    Icon(
+                        imageVector = Icons.Default.Clear,
+                        contentDescription = stringResource(
+                            id = R.string.clear_input
+                        )
+                    )
                 }
-            },
-        keyboardOptions = KeyboardOptions(
-            capitalization = KeyboardCapitalization.Sentences,
-            keyboardType = KeyboardType.Text,
-            imeAction = ImeAction.Search
-        ),
-        keyboardActions = KeyboardActions(
-            onSearch = {
-                onInputSubmitted()
-                focusRequester.freeFocus()
             }
-        ),
-        maxLines = 1,
-        minLines = 1
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        content = {
+            Suggestions(
+                airports = suggestions,
+                onAirportClicked = onAirportClicked
+            )
+        }
     )
-}*/
+}
 
 @Composable
 fun Suggestions(
     modifier: Modifier = Modifier,
-    airports: List<Airport>
+    airports: List<Airport>,
+    onAirportClicked: (Airport) -> Unit
 ) {
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(airports) {
-            AirportItem(airport = it)
+            AirportItem(
+                airport = it,
+                onItemClicked = onAirportClicked
+            )
         }
     }
 }
@@ -247,11 +219,12 @@ fun Suggestions(
 @Composable
 fun AirportItem(
     modifier: Modifier = Modifier,
-    airport: Airport
+    airport: Airport,
+    onItemClicked: (Airport) -> Unit
 ) {
     Row(
         modifier = modifier.clickable {
-            // TODO: Define function to make appear the list of flights
+            onItemClicked(airport)
         }
     ) {
         Icon(
@@ -396,8 +369,8 @@ fun SearchBarPreview() {
     }
 }*/
 
-@Composable
-@Preview
+//@Composable
+/*@Preview
 fun AirportItemPreview() {
     FlightSearchTheme(
         darkTheme = true
@@ -411,8 +384,9 @@ fun AirportItemPreview() {
             )
         )
     }
-}
+}*/
 
+/*
 @Composable
 @Preview
 fun FlightCard() {
@@ -439,4 +413,4 @@ fun FlightCard() {
             removeFromFav = {}
         )
     }
-}
+}*/
