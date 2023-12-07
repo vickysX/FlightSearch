@@ -32,20 +32,8 @@ class FlightSearchViewModel @Inject constructor(
 
     private val coroutineScope = viewModelScope
 
-    private var queryString : StateFlow<String> =
-        userPreferencesRepository.queryString.map {
-            it
-        }
-            .stateIn(
-                scope = coroutineScope,
-                started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-                initialValue = ""
-            )
-
     private var _userInput = MutableStateFlow("")
     val userInput = _userInput.asStateFlow()
-    /*var userInput by mutableStateOf("")
-        private set*/
 
     private val airportsFlow = airportsRepository.getAllAirports()
 

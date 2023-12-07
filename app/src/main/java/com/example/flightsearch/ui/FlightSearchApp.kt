@@ -89,7 +89,6 @@ fun FlightSearchApp(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun AppBody(
     modifier: Modifier = Modifier,
@@ -111,7 +110,6 @@ fun AppBody(
             mutableStateOf(false)
         }
         Column(
-            //horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(
                 horizontal = 16.dp,
                 vertical = 8.dp
