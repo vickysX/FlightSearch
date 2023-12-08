@@ -74,9 +74,8 @@ class FlightSearchViewModel @Inject constructor(
                 initialValue = emptyList()
             )
 
-    private var _flights: MutableStateFlow<List<Flight>>? = null
-    val flights: StateFlow<List<Flight>> = _flights?.asStateFlow()
-        ?: MutableStateFlow<List<Flight>>(emptyList()).asStateFlow()
+    private var _flights: MutableStateFlow<List<Flight>> = MutableStateFlow(emptyList())
+    val flights: StateFlow<List<Flight>> = _flights.asStateFlow()
 
     private var _favoriteFlights =
         MutableStateFlow(mutableListOf<Flight>())
@@ -122,13 +121,13 @@ class FlightSearchViewModel @Inject constructor(
     }
 
     fun provideFlights(selectedAirport: Airport) {
+        _currentAirport.update { selectedAirport }
         viewModelScope.launch {
             val flightsList = mutableListOf<Flight>()
             var airportsList: List<Airport>
             airportsRepository.getAllAirports().collect {
                 Log.d("ViewModel_Airports_Flow", it.toString())
                 airportsList = it
-                _currentAirport.update { selectedAirport }
                 for (airport in airportsList) {
                     if (airport == selectedAirport) {
                         continue
@@ -143,32 +142,12 @@ class FlightSearchViewModel @Inject constructor(
                     if (favorites.value.contains(flightsList.last().toFavorite())) {
                         flightsList.last().isFavorite = true
                     }
-                    /*_flights.update {
-                        it.add(
-                            Flight(
-                                departureAirport = selectedAirport,
-                                destinationAirport = airport,
-                                isFavorite = false
-                            )
-                        )
-                        if (favorites.value.contains(it.last().toFavorite())) {
-                            it.last().isFavorite = true
-                        }
-                        it
-                    }*/
-
                 }
-                _flights = MutableStateFlow(flightsList)
+                _flights.value = flightsList
                 Log.d("ViewModel_Airports", airportsList.toString())
                 Log.d("ViewModel", flightsList.toString())
-                Log.d("ViewModel", _flights!!.value.toString())
+                Log.d("ViewModel", _flights.value.toString())
             }
-
-            /*_airports.collect {
-                Log.d("ViewModel_Airports_StateFlow", it.toString())
-            }*/
-            //val airportsList = _airports.value
-
         }
     }
 
