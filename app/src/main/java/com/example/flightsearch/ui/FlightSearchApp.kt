@@ -56,11 +56,18 @@ fun FlightSearchApp(
 ) {
     val userQuery = viewModel.userInput
     val suggestions by viewModel.searchResults.collectAsStateWithLifecycle()
-    val flights = viewModel.flights
-    val favoriteFlights = viewModel.favoriteFlights
+    val flights by viewModel.flights.collectAsStateWithLifecycle()
+    val favoriteFlights by viewModel.favoriteFlights.collectAsStateWithLifecycle()
     val addToFav: (Flight) -> Unit = { viewModel.addToFavorites(it) }
     val removeFromFav: (Flight) -> Unit = {
         viewModel.removeFromFavorites(it)
+    }
+    val currentDepartureAirport = viewModel.currentAirport.collectAsStateWithLifecycle()
+    var areWeLookingForAllFlights by rememberSaveable {
+        mutableStateOf(false)
+    }
+    val changeAllFlightsFavorites = {lookingForAll: Boolean ->
+        areWeLookingForAllFlights = lookingForAll
     }
     Scaffold(
         modifier = modifier,
@@ -80,11 +87,16 @@ fun FlightSearchApp(
             updateQuery = { viewModel.updateQueryString(it) },
             onInputSubmitted = { viewModel.saveQueryPreference() },
             suggestions = suggestions,
-            onAirportClicked = {viewModel.provideFlights(it)},
+            onAirportClicked = {
+                viewModel.provideFlights(it)
+                changeAllFlightsFavorites(true)
+            },
             flights = flights,
             favoriteFlights = favoriteFlights,
             addToFav = addToFav,
-            removeFromFav = removeFromFav
+            removeFromFav = removeFromFav,
+            currentDepartureAirport = currentDepartureAirport.value,
+            areWeLookingForAllFlights = areWeLookingForAllFlights
         )
     }
 }
@@ -100,7 +112,9 @@ fun AppBody(
     flights: List<Flight>,
     favoriteFlights: List<Flight>,
     addToFav: (Flight) -> Unit,
-    removeFromFav: (Flight) -> Unit
+    removeFromFav: (Flight) -> Unit,
+    currentDepartureAirport: Airport?,
+    areWeLookingForAllFlights: Boolean
 ) {
     Column(
         modifier = modifier,
@@ -112,6 +126,7 @@ fun AppBody(
         val onActiveChange = {isActive: Boolean ->
             active = isActive
         }
+
         Column(
             modifier = Modifier.padding(
                 horizontal = 16.dp,
@@ -128,11 +143,23 @@ fun AppBody(
                 onActiveChange = onActiveChange
             )
             if (!active) {
-                Flights(
-                    flights = favoriteFlights,
-                    addToFav = addToFav,
-                    removeFromFav = removeFromFav
-                )
+                if (areWeLookingForAllFlights) {
+                    Flights(
+                        flights = flights,
+                        addToFav = addToFav,
+                        removeFromFav = removeFromFav,
+                        departureAirport = currentDepartureAirport,
+                        areFavorites = false
+                    )
+                } else {
+                    Flights(
+                        flights = favoriteFlights,
+                        addToFav = addToFav,
+                        removeFromFav = removeFromFav,
+                        departureAirport = null,
+                        areFavorites = true
+                    )
+                }
             }
         }
     }
@@ -246,14 +273,23 @@ fun AirportItem(
 fun Flights(
     modifier: Modifier = Modifier,
     flights: List<Flight>,
+    areFavorites: Boolean,
     addToFav: (Flight) -> Unit,
-    removeFromFav: (Flight) -> Unit
+    removeFromFav: (Flight) -> Unit,
+    departureAirport: Airport?
 ) {
+    val title = when {
+        areFavorites -> stringResource(
+            id = R.string.favorite_flights
+        )
+        else -> stringResource(
+            id = R.string.flights_from,
+            departureAirport!!.iataCode
+        )
+    }
     Column {
         Text(
-            text = stringResource(
-                id = R.string.favorite_flights
-            )
+            text = title
         )
         LazyColumn {
             items(flights) { flight ->
