@@ -33,8 +33,6 @@ class FlightSearchViewModel @Inject constructor(
     private val userPreferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
-    //private val coroutineScope = viewModelScope
-
     var userInput by mutableStateOf("")
         private set
 
@@ -77,18 +75,9 @@ class FlightSearchViewModel @Inject constructor(
     private var _flights: MutableStateFlow<List<Flight>> = MutableStateFlow(emptyList())
     val flights: StateFlow<List<Flight>> = _flights.asStateFlow()
 
-    private var _favoriteFlights =
-        MutableStateFlow(mutableListOf<Flight>())
+    private var _favoriteFlights: MutableStateFlow<MutableList<Flight>> =
+        MutableStateFlow(mutableListOf())
     val favoriteFlights: StateFlow<List<Flight>> = _favoriteFlights.asStateFlow()
-
-    fun createListOfFlights(id: Int) {
-        viewModelScope.launch {
-            val selectedAirport = airportsRepository.getSelectedAirport(id)
-            _airports.first().map {
-
-            }
-        }
-    }
 
     fun updateQueryString(query: String) {
         userInput = query
@@ -139,7 +128,8 @@ class FlightSearchViewModel @Inject constructor(
                             isFavorite = false
                         )
                     )
-                    if (favorites.value.contains(flightsList.last().toFavorite())) {
+                    val favList = favorites.value
+                    if (favList.contains(flightsList.last().toFavorite())) {
                         flightsList.last().isFavorite = true
                     }
                 }
@@ -151,27 +141,35 @@ class FlightSearchViewModel @Inject constructor(
         }
     }
 
-    fun provideFavoritesAsFlights() {
+    private fun provideFavoritesAsFlights() {
         viewModelScope.launch {
-            favorites.value.map { favorite ->
-                _favoriteFlights.value.add(
-                    Flight(
-                        airportsRepository
-                            .getAirportByIataCode(favorite.departureCode)
-                            .first(),
-                        airportsRepository
-                            .getAirportByIataCode(favorite.destinationCode)
-                            .first(),
-                        true
+            var favoritesList: List<Favorite>
+            favoritesRepository.getFavoriteFlights().collect {
+                favoritesList = it
+                favoritesList.forEach {favorite ->
+                    _favoriteFlights.value.add(
+                        Flight(
+                            airportsRepository
+                                .getAirportByIataCode(favorite.departureCode)
+                                .first(),
+                            airportsRepository
+                                .getAirportByIataCode(favorite.destinationCode)
+                                .first(),
+                            true
+                        )
                     )
-                )
+                }
+                Log.d("ViewModel_Favorites", favoritesList.toString())
             }
+            /*favorites.value.map { favorite ->
+
+            }*/
         }
     }
 
     init {
         userInput = loadPreferenceFromDataStore()
-        // TODO: Call method to provide favorite flights
+        provideFavoritesAsFlights()
     }
 
 }

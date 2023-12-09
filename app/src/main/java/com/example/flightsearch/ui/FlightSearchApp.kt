@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,10 +18,12 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.LocalAirport
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.Text
@@ -35,18 +36,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.flightsearch.R
 import com.example.flightsearch.models.Airport
+import com.example.flightsearch.ui.theme.FlightSearchTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -214,8 +217,8 @@ fun AirportsSearchBar(
             }
         },
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp),
+            .fillMaxWidth(),
+            //.padding(bottom = 16.dp),
         content = {
             Suggestions(
                 airports = suggestions,
@@ -289,9 +292,13 @@ fun Flights(
     }
     Column {
         Text(
-            text = title
+            text = title,
+            modifier = Modifier.padding(vertical = 16.dp)
         )
-        LazyColumn {
+        LazyColumn(
+            //contentPadding = PaddingValues(vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             items(flights) { flight ->
                 FlightCard(
                     flight = flight,
@@ -310,50 +317,69 @@ fun FlightCard(
     addToFav: (Flight) -> Unit,
     removeFromFav: (Flight) -> Unit
 ) {
+    var isStarOn by rememberSaveable {
+        mutableStateOf(flight.isFavorite)
+    }
     Card(
         modifier = modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(
-                modifier = Modifier.padding(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(
                     top = 4.dp,
                     bottom = 4.dp,
                     start = 4.dp,
                     end = 8.dp
-                )
+                ),
+                horizontalAlignment = Alignment.Start
             ) {
                 FlightCardItem(
                     resDepArr = R.string.departure,
                     airport = flight.departureAirport
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 FlightCardItem(
                     resDepArr = R.string.destination,
                     airport = flight.destinationAirport
                 )
             }
-            IconButton(
-                onClick = {
-                    !flight.isFavorite
-                    when {
-                        flight.isFavorite -> removeFromFav(flight)
-                        else -> addToFav(flight)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                IconButton(
+                    onClick = {
+                        isStarOn = !isStarOn
+                        when {
+                            flight.isFavorite -> removeFromFav(flight)
+                            else -> addToFav(flight)
+                        }
+                    },
+                    modifier = Modifier.padding(
+                        start = 8.dp,
+                        end = 4.dp
+                    )
+                ) {
+                    if (isStarOn) {
+                        Icon(
+                            imageVector = Icons.Filled.Star,
+                            contentDescription = null
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Outlined.Star,
+                            contentDescription = null
+                        )
                     }
                 }
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Star,
-                    contentDescription = null,
-                    tint = if (flight.isFavorite) {
-                        Color.Yellow
-                    } else {
-                        Color.Unspecified
-                    },
-                    modifier = Modifier.size(32.dp)
-                )
             }
         }
     }
@@ -369,7 +395,8 @@ fun FlightCardItem(
         modifier = modifier.padding(4.dp)
     ) {
         Text(
-            text = stringResource(id = resDepArr)
+            text = stringResource(id = resDepArr),
+            style = MaterialTheme.typography.bodySmall,
         )
         AirportSpannable(airport = airport)
     }
@@ -383,7 +410,8 @@ fun AirportSpannable(
     val airportName = buildAnnotatedString {
         withStyle(
             style = SpanStyle(
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
             )
         ) {
             append(airport.iataCode)
@@ -393,16 +421,16 @@ fun AirportSpannable(
     }
     Text(
         text = airportName,
+        style = MaterialTheme.typography.bodySmall
         //textAlign = TextAlign.Justify
     )
 }
 
 
 
-/*
 @Composable
 @Preview
-fun FlightCard() {
+fun FlightCardPreview() {
     val departureAirport = Airport(
         id = 0,
         iataCode = "FCO",
@@ -420,10 +448,10 @@ fun FlightCard() {
             flight = Flight(
                 departureAirport = departureAirport,
                 destinationAirport = destinationAirport,
-                isFavorite = true
+                isFavorite = false
             ),
             addToFav = {},
             removeFromFav = {}
         )
     }
-}*/
+}
